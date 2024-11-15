@@ -42,9 +42,15 @@ void ConsoleInit() // 콘솔 커서 숨김 설정 및 콘솔 창 크기 지정
 void gotoxy(int x, int y) // 커서 좌표 이동 함수
 {
     COORD pos = {(SHORT)x, (SHORT)y}; // 명시적 형변환
-
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
+
+enum MAIN_MENU
+{
+    MENU_START = 1,
+    MENU_EXIT,
+    MENU_NONE
+};
 
 enum Block_Info
 {
@@ -59,6 +65,68 @@ enum Block_Info
 };
 
 Block_Info BlockInfo = BlockNull;
+
+class CMenu
+{
+public:
+    int OutputMenu()
+    {
+        while (true)
+        {
+            system("cls");
+            CreateLogo();
+            gotoxy(22, 17);
+            cout << "======================= 1. 시작 =======================" << endl;
+            gotoxy(22, 18);
+            cout << "======================= 2. 종료 =======================" << endl;
+
+            gotoxy(22, 22);
+            cout << "메뉴를 선택하세요 : ";
+            int iInput = InputInt();
+            if (iInput < MENU_START || iInput >= MENU_NONE)
+            {
+                cout << "다시 입력하세요." << endl;
+                system("pause");
+                continue;
+            }
+            return iInput;
+        }
+    }
+
+private:
+    void CreateLogo() // Tetris 출력
+    {
+        gotoxy(20, 7);
+        cout << "    ######    ###     ######   ###      ###       ##     " << endl;
+        gotoxy(20, 8);
+        cout << "     ###    ##        ####    ## ##      ##     ## #    " << endl;
+        gotoxy(20, 9);
+        cout << "      ##    ##          ##    ##  ##     ##     ##      " << endl;
+        gotoxy(20, 10);
+        cout << "      ##   #####        ##   #####       ##     ####   " << endl;
+        gotoxy(20, 11);
+        cout << "      ##   ##           ##   ####       ###         ## " << endl;
+        gotoxy(20, 12);
+        cout << "      ###  ###          ###  ## ##      ###    ###  ## " << endl;
+        gotoxy(20, 13);
+        cout << "      ###    #####      ###  ##   ##    ###     #####  " << endl;
+    }
+
+    int InputInt()
+    {
+        int iInput;
+        cin >> iInput;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(1024, '\n');
+            return 0;
+        }
+
+        return iInput;
+    }
+};
 
 class CBlock
 {
@@ -219,6 +287,18 @@ int main()
 {
     SetConsoleEncoding(); // 콘솔 인코딩 설정
     ConsoleInit();        // 커서 숨기기 및 콘솔창 크기 초기화 함수
-    Play();
+    CMenu Menu;
+    int iInput = Menu.OutputMenu(); // 구조체, Switch-Case문을 통한 메뉴 선택지 입력
+
+    switch (iInput)
+    {
+    case MENU_START:
+        system("cls");
+        Play(); // 게임 시작
+        break;
+    case MENU_EXIT:
+        system("cls");
+        break;
+    }
     return 0;
 }
