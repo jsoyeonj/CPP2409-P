@@ -451,6 +451,7 @@ public:
                 }
             }
         }
+        RemoveShape(Map, blockShape, BlockPos);
         Sleep(80);
         (BlockPos->Y)++;
         return false; // 닿지 않았으면 블록을 한 칸 아래로 내린다.
@@ -483,6 +484,7 @@ public:
         }
         if (goLeft == true)
         {
+            RemoveShape(Map, blockShape, BlockPos);
             (BlockPos->X)--;
         }
     }
@@ -515,6 +517,7 @@ public:
         }
         if (goRight == true)
         {
+            RemoveShape(Map, blockShape, BlockPos);
             (BlockPos->X)++;
         }
     }
@@ -538,7 +541,39 @@ public:
                 temp_arr[i][j] = blockShape[5 - j - 1][i];
             }
         }
+        // 회전된 모양이 가능한지 확인
+        for (int i = 0; i < 5; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                if (temp_arr[i][j] == 1)
+                {
+                    // 회전된 위치가 맵 범위를 벗어나거나 다른 블록과 충돌하면 회전 불가
+                    if ((BlockPos->X + j) >= MAPWIDTH ||
+                        (BlockPos->X + j) < 0 ||
+                        (BlockPos->Y + i) >= MAPHEIGHT ||
+                        Map[BlockPos->Y + i][BlockPos->X + j] == '1')
+                    {
+                        rotate = false;
+                        break;
+                    }
+                }
+            }
+            if (!rotate)
+                break;
+        }
 
+        // 회전이 가능하면 블록 모양을 회전된 모양으로 변경
+        if (rotate)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                for (int j = 0; j < 5; j++)
+                {
+                    blockShape[i][j] = temp_arr[i][j];
+                }
+            }
+        }
         for (int i = 0; i < 5; i++)
         {
             RightArray[i] = Block.LimitRight(temp_arr, i, RightArray, &RightRow, &RightCol); // 그 행의 제일 오른쪽에 있는 블럭의 열
@@ -546,6 +581,25 @@ public:
         }
 
         Block.LimitBottom(temp_arr, BottomArray, &BottomRow);
+    }
+    void RemoveShape(char Map[MAPHEIGHT][MAPWIDTH], int blockShape[5][5], Position *BlockPos)
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                if (blockShape[i][j] == 1)
+                    Map[BlockPos->Y + i][BlockPos->X + j] = '0';
+            }
+        }
+    }
+
+    bool GameOverCheck(char map[MAPHEIGHT][MAPWIDTH])
+    {
+        for (int i = 0; i < MAPWIDTH; i++)
+            if (map[0][i] == '1')
+                return true;
+        return false;
     }
 };
 int Play(char Map[MAPHEIGHT][MAPWIDTH])
@@ -571,6 +625,9 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
     {
         if (Bottom)
         {
+            if (map.GameOverCheck(Map))
+                return 0;
+
             PositionInit(&BlockPos); // 커서 초기화
 
             for (int i = 0; i < 5; i++) // block을 다음 블럭 모양으로 가져오기
@@ -580,8 +637,9 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
             block.SetBlock(NextBlock);      // 다음 블럭 새로 만들기
             block.DrawNextBlock(NextBlock); // 다음 블럭 모양 Map에 출력
             Bottom = false;                 // 새로운 블록의 움직임을 위해 false로 변환
+            continue;
         }
-
+        map.RemoveShape(Map, BlockShape, &BlockPos);
         map.OutputBlock(Map, BlockShape, BlockPos);
         map.DrawMap(Map);
 
@@ -589,15 +647,24 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
         if (Bottom)
             continue;
 
-        if (GetAsyncKeyState(VK_SPACE) & 0x8000) // Press 'Space' : 블록 좌측 이동
+        if (GetAsyncKeyState(VK_SPACE) & 0x8000)
+        { // Press 'Space' : 블록 회전
             if (noRotate == false)
+            {
+                map.RemoveShape(Map, BlockShape, &BlockPos);
                 map.Rotate(Map, BlockShape, &BlockPos);
-
-        if (GetAsyncKeyState('A') & 0x8000) // Press 'A' : 블록 좌측 이동
+            }
+        }
+        if (GetAsyncKeyState('A') & 0x8000)
+        { // Press 'A' : 블록 좌측 이동
+            map.RemoveShape(Map, BlockShape, &BlockPos);
             map.GoLeft(Map, BlockShape, &BlockPos);
-
-        if (GetAsyncKeyState('D') & 0x8000) // Press 'D' : 블록 좌측 이동
+        }
+        if (GetAsyncKeyState('D') & 0x8000)
+        { // Press 'D' : 블록 우측 이동
+            map.RemoveShape(Map, BlockShape, &BlockPos);
             map.GoRight(Map, BlockShape, &BlockPos);
+        }
         Sleep(50);
     }
     return 0;
