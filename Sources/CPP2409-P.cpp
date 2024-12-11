@@ -420,6 +420,44 @@ public:
             cout << endl;
         }
     }
+    void DrawSubMap(int best, int score) // 서브맵 (다음 블록, 점수칸) 생성
+    {
+
+        gotoxy(61, 6);
+        cout << "NEXT";
+        for (int i = 0; i <= 7; i++)
+        {
+            for (int j = 0; j <= 7; j++)
+            {
+                gotoxy(55 + j * 2, 6 + i);
+                if (j == 7 || j == 0 || i == 7)
+                    cout << "▩";
+            }
+        }
+
+        gotoxy(60, 18);
+        cout << "SCORE";
+        for (int i = 0; i <= 4; i++)
+        {
+            for (int j = 0; j <= 7; j++)
+            {
+                gotoxy(55 + j * 2, 18 + i);
+                if (j == 0 || j == 7 || i == 4)
+                    cout << "▩";
+            }
+        }
+
+        gotoxy(62, 20);
+        if (score > 100)
+            gotoxy(61, 20);
+        else if (score > 1000)
+            gotoxy(60, 20);
+        else if (score > 10000)
+            gotoxy(59, 20);
+        else if (score > 100000)
+            gotoxy(58, 20);
+        cout << score;
+    }
     void OutputBlock(char Map[MAPHEIGHT][MAPWIDTH], int blockShape[5][5], Position BlockPos) // 블록 출력 : 2차원 배열 Map에 표현
     {
         // 블럭 모양에 해당하는 좌표를 Map상의 좌표에 뿌려줌 ('1' 부여)
@@ -602,6 +640,7 @@ public:
         return false;
     }
 };
+
 int Play(char Map[MAPHEIGHT][MAPWIDTH])
 {
 
@@ -615,6 +654,7 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
     Position BlockPos = {2, 2};
     map.InitMap(Map);
     map.DrawMap(Map);
+    map.DrawSubMap(BestScore, Score);
     PositionInit(&BlockPos); // 위치 초기화
 
     block.SetBlock(BlockShape); // 블럭 모양 설정, 회전 가능 도형인지 반환
