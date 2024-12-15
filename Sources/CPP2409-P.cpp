@@ -458,6 +458,57 @@ public:
             gotoxy(58, 20);
         cout << score;
     }
+    void CheckLine(char Map[MAPHEIGHT][MAPWIDTH], Position BlockPos, int *score)
+    {
+        int count = 0;
+        int linecount = 0;
+        int height = 0;
+
+        for (int i = MAPHEIGHT; i >= (BlockPos.Y); i--)
+        {
+            for (int j = 0; j < MAPWIDTH; j++)
+            {
+                if (Map[i][j] == '0')
+                {
+                    break;
+                }
+                else if (Map[i][j] == '1')
+                {
+                    height = i;
+                    count++;
+                }
+
+                if (count == MAPWIDTH)
+                {
+                    linecount++;
+                    for (int j = 0; j <= MAPWIDTH; j++)
+                    {
+                        Map[height][j] = '0';
+                    }
+
+                    while (height > 1)
+                    {
+                        for (int j = 0; j <= MAPWIDTH; j++)
+                        {
+                            Map[height][j] = Map[height - 1][j];
+                        }
+                        height--;
+                    }
+                    i++; // 한 줄씩 다 내렸으므로 다시 그 줄부터 체크
+                }
+            }
+            count = 0;
+        }
+
+        if (linecount == 1)
+            (*score) += 500;
+        else if (linecount == 2)
+            (*score) += 2500;
+        else if (linecount == 3)
+            (*score) += 5000;
+        else if (linecount == 4)
+            (*score) += 10000;
+    }
     void OutputBlock(char Map[MAPHEIGHT][MAPWIDTH], int blockShape[5][5], Position BlockPos) // 블록 출력 : 2차원 배열 Map에 표현
     {
         // 블럭 모양에 해당하는 좌표를 Map상의 좌표에 뿌려줌 ('1' 부여)
@@ -572,6 +623,8 @@ public:
         bool goLeft = true;
         bool goRight = true;
 
+        RemoveShape(Map, blockShape, BlockPos);
+
         for (int i = 0; i < 5; i++)
         {
             for (int j = 0; j < 5; j++)
@@ -579,30 +632,199 @@ public:
                 temp_arr[i][j] = blockShape[5 - j - 1][i];
             }
         }
-        // 회전된 모양이 가능한지 확인
+
         for (int i = 0; i < 5; i++)
         {
-            for (int j = 0; j < 5; j++)
+            RightArray[i] = Block.LimitRight(temp_arr, i, RightArray, &RightRow, &RightCol); // 그 행의 제일 오른쪽에 있는 블럭의 열
+            LeftArray[i] = Block.LimitLeft(temp_arr, i, LeftArray, &LeftRow, &LeftCol);      // 그 행의 제일 왼쪽에 있는 블럭의 열
+        }
+
+        Block.LimitBottom(temp_arr, BottomArray, &BottomRow);
+
+        //////////////// 여기까지 temp_arr에 rotate된 블록을 저장하고 왼, 오, 아래 열과 행을 다 저장한 상태 //////////////////////////////
+
+        while ((BlockPos->X) + LeftArray[LeftRow] - 1 < 0) // 바뀐 모양이 왼쪽 벽에 닿거나 한 칸 왼쪽에 블럭이 있을 때
+        {
+            if (rotate == false)
             {
-                if (temp_arr[i][j] == 1)
+                count = 0;
+                break;
+            }
+
+            for (int j = 0; j <= 4; j++)
+            {
+                if (Map[(BlockPos->Y) + j][(BlockPos->X) + RightArray[j] + 1] != '1' && Map[(BlockPos->Y) + BottomArray[j] + 1][(BlockPos->X) + j] != '1') // 한칸 오른쪽에도 블럭이 없고 아래도 없으면
+                    count++;
+                else
                 {
-                    // 회전된 위치가 맵 범위를 벗어나거나 다른 블록과 충돌하면 회전 불가
-                    if ((BlockPos->X + j) >= MAPWIDTH ||
-                        (BlockPos->X + j) < 0 ||
-                        (BlockPos->Y + i) >= MAPHEIGHT ||
-                        Map[BlockPos->Y + i][BlockPos->X + j] == '1')
+                    rotate = false;
+                    break;
+                }
+            }
+
+            if (count == 5)
+            {
+                goRight = true;
+                count = 0;
+            }
+
+            if (goRight == true)
+                (BlockPos->X)++;
+            if (rotate == false)
+            {
+                count = 0;
+                break;
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////ㄱ
+
+        while ((BlockPos->X) + RightArray[RightRow] + 1 >= MAPWIDTH) // 오른쪽 벽에 닿았거나  오른쪽에 블럭이 있을 때
+        {
+            goLeft = false;
+            if (rotate == false)
+            {
+                count = 0;
+                break;
+            }
+
+            for (int j = 0; j <= 4; j++)
+            {
+                if (Map[(BlockPos->Y) + j][(BlockPos->X) + LeftArray[j] - 1] != '1' && Map[(BlockPos->Y) + BottomArray[j] + 1][(BlockPos->X) + j] != '1') // 한칸 왼쪽에도 블럭이 없고 아래에도 블럭이 없으면
+                    count++;
+                else
+                {
+                    rotate = false;
+                    break;
+                }
+
+                if (count == 5)
+                {
+                    goLeft = true;
+                    count = 0;
+                }
+
+                if (goLeft == true)
+                {
+                    (BlockPos->X)--;
+                    goLeft = false;
+                }
+
+                if (rotate == false)
+                {
+                    count = 0;
+                    break;
+                }
+            }
+        }
+        while ((BlockPos->Y) + BottomArray[BottomRow] >= MAPHEIGHT)
+        {
+            if (rotate == false)
+            {
+                count = 0;
+                break;
+            }
+
+            for (int i = 0; i <= 4; i++)
+            {
+                if (Map[(BlockPos->Y) + i][(BlockPos->X) + LeftArray[i] - 1] != '1' && Map[(BlockPos->Y) + i][(BlockPos->X) + RightArray[i] + 1] != '1') // 한칸 왼쪽에도 블럭이 없고 아래에도 블럭이 없으면
+                    count++;
+                else
+                {
+                    rotate = false;
+                    break;
+                }
+
+                if (count == 5)
+                {
+                    (BlockPos->Y)--;
+                    count = 0;
+                }
+
+                if (rotate == false)
+                {
+                    count = 0;
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i <= 4; i++)
+        {
+            if (Map[(BlockPos->Y) + i][(BlockPos->X) + LeftArray[i] - 1] == '1') // 벽 왼쪽에 블럭이 있따면;
+            {
+                for (int j = 0; j <= 4; j++)
+                {
+                    if (Map[(BlockPos->Y) + j][(BlockPos->X) + LeftArray[j] - 1] != '1')
+                    {
+                        if (Map[(BlockPos->Y) + j][(BlockPos->X) + RightArray[j] + 1] != '1' && Map[(BlockPos->Y) + BottomArray[j] + 1][(BlockPos->X) + j] != '1')
+                            count++;
+                        else
+                        {
+                            rotate = false;
+                            break;
+                        }
+                    }
+                    else
                     {
                         rotate = false;
                         break;
                     }
                 }
+
+                if (count == 5)
+                {
+                    (BlockPos->X)++;
+                    count = 0;
+                }
+
+                if (rotate == false)
+                {
+                    count = 0;
+                    break;
+                }
             }
-            if (!rotate)
-                break;
         }
 
-        // 회전이 가능하면 블록 모양을 회전된 모양으로 변경
-        if (rotate)
+        for (int i = 0; i <= 4; i++)
+        {
+            if (Map[(BlockPos->Y) + i][(BlockPos->X) + RightArray[i] + 1] == '1') // 벽 왼쪽에 블럭이 있따면;
+            {
+                for (int j = 0; j <= 4; j++)
+                {
+                    if (Map[(BlockPos->Y) + j][(BlockPos->X) + RightArray[j] + 1] != '1')
+                    {
+                        if (Map[(BlockPos->Y) + j][(BlockPos->X) + LeftArray[j] - 1] != '1' && Map[(BlockPos->Y) + BottomArray[j] + 1][(BlockPos->X) + j] != '1')
+                            count++;
+                        else
+                        {
+                            rotate = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        rotate = false;
+                        break;
+                    }
+                }
+
+                if (count == 5)
+                {
+                    (BlockPos->X)--;
+                    count = 0;
+                }
+
+                if (rotate == false)
+                {
+                    count = 0;
+                    break;
+                }
+            }
+        }
+        ////////////////////////////////// 여기까지가 조건. ///////////////////
+
+        if (rotate == true) // rotate가 가능 하다면 temp_arr의 블록쉐이프를 그대로 옮겨준다.
         {
             for (int i = 0; i < 5; i++)
             {
@@ -612,13 +834,23 @@ public:
                 }
             }
         }
+    }
+
+    bool NoRotate(int BlockShape[5][5])
+    {
+        int count = 0;
         for (int i = 0; i < 5; i++)
         {
-            RightArray[i] = Block.LimitRight(temp_arr, i, RightArray, &RightRow, &RightCol); // 그 행의 제일 오른쪽에 있는 블럭의 열
-            LeftArray[i] = Block.LimitLeft(temp_arr, i, LeftArray, &LeftRow, &LeftCol);      // 그 행의 제일 왼쪽에 있는 블럭의 열
+            for (int j = 0; j < 5; j++)
+            {
+                if (BlockShape[i][j] == Block.OBlock[i][j])
+                    count++;
+            }
         }
+        if (count == 25)
+            return true;
 
-        Block.LimitBottom(temp_arr, BottomArray, &BottomRow);
+        return false;
     }
     void RemoveShape(char Map[MAPHEIGHT][MAPWIDTH], int blockShape[5][5], Position *BlockPos)
     {
@@ -638,6 +870,33 @@ public:
             if (map[0][i] == '1')
                 return true;
         return false;
+    }
+    void GameOver(int *score)
+    {
+        system("cls");
+
+        gotoxy(15, 12);
+        cout << "  ####      ##     ##  ##   ######    ####    ##  ##   ######   #####   " << endl;
+        gotoxy(15, 13);
+        cout << " ##  ##    ####    ######   ##       ##  ##   ##  ##   ##       ##  ##  " << endl;
+        gotoxy(15, 14);
+        cout << " ##       ##  ##   ######   ####     ##  ##   ##  ##   ####     ##  ##  " << endl;
+        gotoxy(15, 15);
+        cout << " ## ###   ######   ##  ##   ##       ##  ##   ##  ##   ##       #####   " << endl;
+        gotoxy(15, 16);
+        cout << " ##  ##   ##  ##   ##  ##   ##       ##  ##    ####    ##       ## ##   " << endl;
+        gotoxy(15, 17);
+        cout << "  ####    ##  ##   ##  ##   ######    ####      ##     ######   ##  ##  " << endl;
+
+        gotoxy(33, 22);
+        cout << " 당신의 점수는 " << *score << "점 입니다." << endl;
+
+        for (int i = 5; i > 0; --i)
+        {
+            gotoxy(37, 24);
+            cout << i << "초 후 종료합니다";
+            Sleep(1000);
+        }
     }
 };
 
@@ -666,9 +925,13 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
         if (Bottom)
         {
             if (map.GameOverCheck(Map))
+            {
+                map.GameOver(&Score);
                 return 0;
+            }
 
-            PositionInit(&BlockPos); // 커서 초기화
+            map.CheckLine(Map, BlockPos, &Score); // 라인 체크
+            PositionInit(&BlockPos);              // 커서 초기화
 
             for (int i = 0; i < 5; i++) // block을 다음 블럭 모양으로 가져오기
                 for (int j = 0; j < 5; j++)
@@ -679,10 +942,10 @@ int Play(char Map[MAPHEIGHT][MAPWIDTH])
             Bottom = false;                 // 새로운 블록의 움직임을 위해 false로 변환
             continue;
         }
-        map.RemoveShape(Map, BlockShape, &BlockPos);
         map.OutputBlock(Map, BlockShape, BlockPos);
         map.DrawMap(Map);
-
+        map.DrawSubMap(BestScore, Score);
+        noRotate = map.NoRotate(BlockShape);
         Bottom = map.GoDown(Map, BlockShape, &BlockPos);
         if (Bottom)
             continue;
