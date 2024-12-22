@@ -373,9 +373,9 @@ public:
         return RightArray[i];
     }
 };
+
 class CMap
 {
-
 public:
     CBlock Block;
 
